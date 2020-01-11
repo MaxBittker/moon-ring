@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "gl": "^4.4.0",
     "gl-mat4": "^1.1.4",
     "glsl-atmosphere": "^2.0.0",
     "glsl-fractal-brownian-noise": "^1.1.0",
@@ -7,8 +8,10 @@
     "glsl-noise": "0.0.0",
     "glslify": "^6.0.0",
     "icosphere": "^1.0.0",
+    "jpeg-js": "^0.3.6",
     "regl": "^1.2.1",
     "regl-camera": "maxbittker/regl-camera",
+    "regl-recorder": "^0.2.0",
     "resl": "^1.0.2"
   },
   "browserify": {
