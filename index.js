@@ -2,9 +2,9 @@
 var createReglRecorder = require("regl-recorder");
 var fs = require("fs");
 
-var videoSize = 600;
+var videoSize = 800;
 var regl = require("regl")(require("gl")(videoSize, videoSize));
-var recorder = createReglRecorder(regl, 200);
+var recorder = createReglRecorder(regl, 170);
 
 var jpeg = require("jpeg-js");
 // var jpegData = fs.readFileSync("grumpycat.jpg");
