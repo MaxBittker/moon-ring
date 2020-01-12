@@ -53,7 +53,7 @@ function onloaded(assets) {
 
   const drawFboBlurred = regl({
     frag: glsl`
-    precision mediump float;
+    precision highp float;
 varying vec2 uv;
 uniform sampler2D tex;
 uniform float wRcp, hRcp;
@@ -74,7 +74,7 @@ void main() {
   gl_FragColor = dither(gl_FragCoord.xy/1.5, color);
 }`,
     vert: `
-    precision mediump float;
+    precision highp float;
     attribute vec2 position;
     varying vec2 uv;
     void main() {
@@ -128,7 +128,7 @@ function earth(regl, opts) {
   var mesh = icosphere(3);
   return regl({
     frag: glsl`
-      precision mediump float;
+      precision highp float;
 
       #pragma glslify: atmosphere = require('glsl-atmosphere')
       #pragma glslify: noise = require('glsl-noise/simplex/3d')
@@ -190,7 +190,7 @@ vec3         c =( (tmoon-0.8)*3.0) * light + vscatter *0.1
       }
     `,
     vert: glsl`
-      precision mediump float;
+      precision highp float;
       uniform mat4 projection, view;
       uniform float x,y;
       attribute vec3 position;
