@@ -1,4 +1,13 @@
-var regl = require("regl")();
+var pixelRatio = Math.min(window.devicePixelRatio, 1.5);
+var regl = require("regl")({
+  pixelRatio: pixelRatio,
+  attributes: {
+    antialias: false,
+    stencil: false,
+    alpha: false,
+    depth: true
+  }
+});
 
 // var createReglRecorder = require("regl-recorder");
 // var fs = require("fs");
@@ -8,7 +17,11 @@ var regl = require("regl")();
 // var recorder = createReglRecorder(regl, 200);
 // var jpeg = require("jpeg-js");
 
-var camera = require("regl-camera")(regl, { minDistance: 1, distance: 12 });
+var camera = require("regl-camera")(regl, {
+  minDistance: 5,
+  distance: 12,
+  maxDistance: 25
+});
 var icosphere = require("icosphere");
 var glsl = require("glslify");
 var resl = require("resl");
@@ -58,20 +71,20 @@ varying vec2 uv;
 uniform sampler2D tex;
 uniform float wRcp, hRcp;
 uniform vec2 resolution;
-
+uniform float pixelRatio;
 #define R int(0)
 
 // clang-format off
 // #pragma glslify: dither = require(glsl-dither)
 // #pragma glslify: dither = require(glsl-dither/8x8)
-// #pragma glslify: dither = require(glsl-dither/4x4)
-#pragma glslify: dither = require(glsl-dither/2x2)
+#pragma glslify: dither = require(glsl-dither/4x4)
+// #pragma glslify: dither = require(glsl-dither/2x2)
 // clang-format on
 
 void main() {
   vec4 color = texture2D(tex, uv);
 
-  gl_FragColor = dither(gl_FragCoord.xy/1.5, color);
+  gl_FragColor =  dither(gl_FragCoord.xy/pixelRatio, color);
 }`,
     vert: `
     precision highp float;
@@ -91,7 +104,8 @@ void main() {
         viewportHeight
       ],
       wRcp: ({ viewportWidth }) => 1.0 / viewportWidth,
-      hRcp: ({ viewportHeight }) => 1.0 / viewportHeight
+      hRcp: ({ viewportHeight }) => 1.0 / viewportHeight,
+      pixelRatio: pixelRatio
     },
     depth: { enable: false },
     count: 3
@@ -115,7 +129,7 @@ void main() {
     // regl.clear({ color: [0, 0, 0, 1], depth: true });
     camera(function() {
       fbo.use(() => {
-        regl.clear({ color: [0, 0, 0, 1], depth: true });
+        regl.clear({ color: [0.0, 0.0, 0.0, 1], depth: true });
 
         earths.forEach(d => d());
       });
@@ -146,7 +160,7 @@ function earth(regl, opts) {
           eye-pos, // ray direction
           pos*1372e3, // ray origin
           sunpos, // sun position
-          22.0, // sun intensity
+          25.0, // sun intensity
           1372e3, // planet radius (m)
           1572e3, // atmosphere radius (m)
           vec3(5.5e-6,13.0e-6,22.4e-6), // rayleigh scattering
@@ -157,35 +171,29 @@ function earth(regl, opts) {
         );
         float lon = mod(atan(vpos.x,vpos.z)*${1 / (2 * Math.PI)}-time*0.01,1.0);
         float lat = asin(-vpos.y*0.79-0.02)*0.5+0.5;
-        
-        // vec3 tday = texture2D(day,vec2(lon,lat)).rgb * 0.7;
-        // vec3 tnight = texture2D(night,vec2(lon,lat)).rgb + vec3(0.3);
-        // vec3 tclouds = texture2D(clouds,vec2(lon,lat)).rgb * 0.7;
+      
         vec3 tmoon = texture2D(moon,vec2(lon,lat)).rgb;
 
         float light = length(vscatter);
         float polar = pow(cos(pow(vpos.y,32.0)),32.0);
 
 
-        // vec3 c = vscatter*0.2 + tday*light
-        //   + tclouds*(light*0.5+(1.0-light)*2e-4)
-        //   + vec3(1.0-polar)*light*0.5
-        //   + pow(tnight,vec3(8.0))*pow(max(0.0,1.0-light),8.0);
+     
+        vec3 c =( (tmoon-0.3)*2.0) * light + vscatter *0.1;
 
-vec3         c =( (tmoon-0.8)*3.0) * light + vscatter *0.1
-
-          + vec3(1.0-polar)*light*0.5; 
+          // + vec3(1.0-polar)*light*0.5; 
           // c = vec3(light);
          vec3 color = pow(c,vec3(1.0/2.2));
 
-         float n =   ((fbm3d(vec3(gl_FragCoord.xy / 4.0, time * 0.0),2) * 0.5) + 0.5);
+        //  float n =   ((fbm3d(vec3(gl_FragCoord.xy / 4.0, time * 0.0),2) * 0.5) + 0.5);
         //  color = vec3(n);
-          if (luma(color) <  n){
+          // if (luma(color) <  n){
           // color = vec3(0.0);
-        }else{
+        // }else{
           // color = vec3(1.0);
-        }
-        color = vec3(luma(color));
+        // }
+        color = vec3(pow(luma(color),0.8));
+        // color *= 1.2;
         gl_FragColor = vec4(color,1.0);
       }
     `,
@@ -218,7 +226,8 @@ vec3         c =( (tmoon-0.8)*3.0) * light + vscatter *0.1
       // day: opts.textures.day,
       // night: opts.textures.night,
       // clouds: opts.textures.clouds,
-      moon: opts.textures.moon
+      moon: opts.textures.moon,
+      pixelRatio: pixelRatio
     },
     framebuffer: fbo
   });
