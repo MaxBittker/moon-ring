@@ -8,17 +8,17 @@ var regl = require("regl")();
 // var recorder = createReglRecorder(regl, 200);
 // var jpeg = require("jpeg-js");
 
-var camera = require("regl-camera")(regl, { minDistance: 1, distance: 3 });
+var camera = require("regl-camera")(regl, { minDistance: 1, distance: 12 });
 var icosphere = require("icosphere");
 var glsl = require("glslify");
 var resl = require("resl");
 
 resl({
   manifest: {
-    day: { type: "image", src: "day.jpg" },
-    night: { type: "image", src: "night.jpg" },
-    clouds: { type: "image", src: "clouds.jpg" },
-    moon: { type: "image", src: "moon.jpg" }
+    // day: { type: "image", src: "day.jpg" },
+    // night: { type: "image", src: "night.jpg" },
+    // clouds: { type: "image", src: "clouds.jpg" },
+    moon: { type: "image", src: "moon_small.jpg" }
   },
   onDone: onloaded
 });
@@ -31,34 +31,62 @@ resl({
 // });
 
 function onloaded(assets) {
-  console.dir(assets.moon);
+  // console.dir(assets.moon);
 
-  var draw = earth(regl, {
-    textures: {
-      day: regl.texture({
-        data: assets.day,
-        mag: "linear"
-      }),
-      night: regl.texture({
-        data: assets.night,
-        mag: "linear"
-      }),
-      clouds: regl.texture({
-        data: assets.clouds,
-        mag: "linear"
-      }),
-      moon: regl.texture({
-        data: assets.clouds,
-        mag: "linear"
-        // ...assets.moon
+  var drawEarth = opts => {
+    return earth(regl, {
+      textures: {
+        // day: regl.texture({
+        //   data: assets.day,
+        //   mag: "linear"
+        // }),
+        // night: regl.texture({
+        //   data: assets.night,
+        //   mag: "linear"
+        // }),
+        // clouds: regl.texture({
+        //   data: assets.clouds,
+        //   mag: "linear"
+        // }),
+        moon: regl.texture({
+          data: assets.moon,
+          mag: "linear"
+          // ...assets.moon
+        })
+      },
+      ...opts
+    });
+  };
+  // var earths = [
+  //   drawEarth({ x: -1, y: -1, t_offset: amt * 0 }),
+  //   drawEarth({ x: -1, y: 0, t_offset: amt * 1 }),
+  //   drawEarth({ x: -1, y: 1, t_offset: amt * 2 }),
+
+  //   drawEarth({ x: 0, y: -1, t_offset: amt * 3 }),
+  //   drawEarth({ x: 0, y: 0, t_offset: amt * 4 }),
+  //   drawEarth({ x: 0, y: 1, t_offset: amt * 5 }),
+
+  //   drawEarth({ x: 1, y: -1, t_offset: amt * 6 }),
+  //   drawEarth({ x: 1, y: 0, t_offset: amt * 7 }),
+  //   drawEarth({ x: 1, y: 1, t_offset: amt * 8 })
+  // ];
+  var amt = 1.5;
+
+  var n = 9;
+  var r = 1.5;
+  var earths = Array(n)
+    .fill("")
+    .map((_, i) =>
+      drawEarth({
+        x: r * Math.sin((Math.PI * 2 * i) / n),
+        y: r * Math.cos((Math.PI * 2 * i) / n),
+        t_offset: amt * i
       })
-    }
-  });
+    );
   regl.frame(function() {
     regl.clear({ color: [0, 0, 0, 1], depth: true });
     camera(function() {
-      draw();
-      // recorder.frame(videoSize, videoSize);
+      earths.forEach(d => d());
     });
   });
 }
@@ -74,7 +102,8 @@ function earth(regl, opts) {
       #pragma glslify: fbm3d = require('glsl-fractal-brownian-noise/3d')
       #pragma glslify: luma = require(glsl-luma)
 
-      uniform sampler2D day, night, clouds, moon;
+      // uniform sampler2D day, night, clouds, moon;
+      uniform sampler2D moon;
       uniform vec3 eye, sunpos;
       uniform float time;
       varying vec3 vpos;
@@ -96,28 +125,27 @@ function earth(regl, opts) {
         float lon = mod(atan(vpos.x,vpos.z)*${1 / (2 * Math.PI)}-time*0.01,1.0);
         float lat = asin(-vpos.y*0.79-0.02)*0.5+0.5;
         
-        vec3 tday = texture2D(day,vec2(lon,lat)).rgb * 0.7;
-        vec3 tnight = texture2D(night,vec2(lon,lat)).rgb + vec3(0.3);
-        vec3 tclouds = texture2D(clouds,vec2(lon,lat)).rgb * 0.7;
+        // vec3 tday = texture2D(day,vec2(lon,lat)).rgb * 0.7;
+        // vec3 tnight = texture2D(night,vec2(lon,lat)).rgb + vec3(0.3);
+        // vec3 tclouds = texture2D(clouds,vec2(lon,lat)).rgb * 0.7;
         vec3 tmoon = texture2D(moon,vec2(lon,lat)).rgb;
 
         float light = length(vscatter);
         float polar = pow(cos(pow(vpos.y,32.0)),32.0);
 
 
-        vec3 c = vscatter*0.2 + tday*light
-          + tclouds*(light*0.5+(1.0-light)*2e-4)
-          + vec3(1.0-polar)*light*0.5
-          + pow(tnight,vec3(8.0))*pow(max(0.0,1.0-light),8.0);
+        // vec3 c = vscatter*0.2 + tday*light
+        //   + tclouds*(light*0.5+(1.0-light)*2e-4)
+        //   + vec3(1.0-polar)*light*0.5
+        //   + pow(tnight,vec3(8.0))*pow(max(0.0,1.0-light),8.0);
 
-         c =( (tmoon-0.8)*3.0) * light + vscatter *0.1
-        //  + tclouds*(light*0.5+(1.0-light)*2e-4)
+vec3         c =( (tmoon-0.8)*3.0) * light + vscatter *0.1
 
           + vec3(1.0-polar)*light*0.5; 
           // c = vec3(light);
          vec3 color = pow(c,vec3(1.0/2.2));
 
-         float n =   ((fbm3d(vec3(gl_FragCoord.xy / 2.0, time * 0.0001),3) * 0.5) + 0.5);
+         float n =   ((fbm3d(vec3(gl_FragCoord.xy / 4.0, time * 0.0001),2) * 0.5) + 0.5);
         //  color = vec3(n);
           if (luma(color) <  n){
           color = vec3(0.0);
@@ -130,11 +158,12 @@ function earth(regl, opts) {
     vert: glsl`
       precision mediump float;
       uniform mat4 projection, view;
+      uniform float x,y;
       attribute vec3 position;
       varying vec3 vpos;
       void main () {
-        vpos = position;
-        gl_Position = projection * view * vec4(vpos,1);
+        vpos = position ;
+        gl_Position = projection * view * vec4(vpos+ vec3(0.,x*2.0,y*2.0),1);
       }
     `,
     attributes: {
@@ -143,14 +172,18 @@ function earth(regl, opts) {
     elements: mesh.cells,
     uniforms: {
       sunpos: function(context) {
-        var t = context.time * 0.5,
-          r = 10;
+        var t = (context.time + opts.t_offset) * 0.5;
+        var r = 10;
         return [Math.cos(t) * r, 0, Math.sin(t) * r];
       },
-      time: regl.context("time"),
-      day: opts.textures.day,
-      night: opts.textures.night,
-      clouds: opts.textures.clouds,
+      x: opts.x,
+      y: opts.y,
+      time: context => {
+        return context.time + opts.t_offset * 50;
+      },
+      // day: opts.textures.day,
+      // night: opts.textures.night,
+      // clouds: opts.textures.clouds,
       moon: opts.textures.moon
     }
   });
