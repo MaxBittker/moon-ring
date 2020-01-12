@@ -1,4 +1,9 @@
 {
+  "scripts": {
+    "start": "./node_modules/.bin/budo index.js  --live",
+    "render": "browserify --node index.js -o bundle.js && node bundle.js",
+    "build": "./node_modules/.bin/browserify -g uglifyify index.js -o docs/bundle.js"
+  },
   "dependencies": {
     "gl": "^4.4.0",
     "gl-mat4": "^1.1.4",
@@ -13,7 +18,8 @@
     "regl": "^1.2.1",
     "regl-camera": "maxbittker/regl-camera",
     "regl-recorder": "^0.2.0",
-    "resl": "^1.0.2"
+    "resl": "^1.0.2",
+    "uglifyify": "^5.0.2"
   },
   "browserify": {
     "transform": [
