@@ -15,20 +15,24 @@ var resl = require("resl");
 
 resl({
   manifest: {
-    // day: { type: "image", src: "day.jpg" },
-    // night: { type: "image", src: "night.jpg" },
-    // clouds: { type: "image", src: "clouds.jpg" },
     moon: { type: "image", src: "moon_small.jpg" }
   },
   onDone: onloaded
 });
 
 // onloaded({
-//   day: fs.readFileSync("day.jpg"),
-//   night: fs.readFileSync("night.jpg"),
-//   clouds: fs.readFileSync("clouds.jpg"),
 //   moon: jpeg.decode(fs.readFileSync("moon.jpg"))
 // });
+
+// create fbo. We set the size in `regl.frame`
+const fbo = regl.framebuffer({
+  color: regl.texture({
+    width: 1,
+    height: 1,
+    wrap: "clamp"
+  }),
+  depth: true
+});
 
 function onloaded(assets) {
   // console.dir(assets.moon);
@@ -36,40 +40,62 @@ function onloaded(assets) {
   var drawEarth = opts => {
     return earth(regl, {
       textures: {
-        // day: regl.texture({
-        //   data: assets.day,
-        //   mag: "linear"
-        // }),
-        // night: regl.texture({
-        //   data: assets.night,
-        //   mag: "linear"
-        // }),
-        // clouds: regl.texture({
-        //   data: assets.clouds,
-        //   mag: "linear"
-        // }),
         moon: regl.texture({
           data: assets.moon,
           mag: "linear"
           // ...assets.moon
         })
       },
+
       ...opts
     });
   };
-  // var earths = [
-  //   drawEarth({ x: -1, y: -1, t_offset: amt * 0 }),
-  //   drawEarth({ x: -1, y: 0, t_offset: amt * 1 }),
-  //   drawEarth({ x: -1, y: 1, t_offset: amt * 2 }),
 
-  //   drawEarth({ x: 0, y: -1, t_offset: amt * 3 }),
-  //   drawEarth({ x: 0, y: 0, t_offset: amt * 4 }),
-  //   drawEarth({ x: 0, y: 1, t_offset: amt * 5 }),
+  const drawFboBlurred = regl({
+    frag: glsl`
+    precision mediump float;
+varying vec2 uv;
+uniform sampler2D tex;
+uniform float wRcp, hRcp;
+uniform vec2 resolution;
 
-  //   drawEarth({ x: 1, y: -1, t_offset: amt * 6 }),
-  //   drawEarth({ x: 1, y: 0, t_offset: amt * 7 }),
-  //   drawEarth({ x: 1, y: 1, t_offset: amt * 8 })
-  // ];
+#define R int(0)
+
+// clang-format off
+// #pragma glslify: dither = require(glsl-dither)
+// #pragma glslify: dither = require(glsl-dither/8x8)
+// #pragma glslify: dither = require(glsl-dither/4x4)
+#pragma glslify: dither = require(glsl-dither/2x2)
+// clang-format on
+
+void main() {
+  vec4 color = texture2D(tex, uv);
+
+  gl_FragColor = dither(gl_FragCoord.xy/1.5, color);
+}`,
+    vert: `
+    precision mediump float;
+    attribute vec2 position;
+    varying vec2 uv;
+    void main() {
+      uv = 0.5 * (position + 1.0);
+      gl_Position = vec4(position, 0, 1);
+    }`,
+    attributes: {
+      position: [-4, -4, 4, -4, 0, 4]
+    },
+    uniforms: {
+      tex: ({ count }) => fbo,
+      resolution: ({ viewportWidth, viewportHeight }) => [
+        viewportWidth,
+        viewportHeight
+      ],
+      wRcp: ({ viewportWidth }) => 1.0 / viewportWidth,
+      hRcp: ({ viewportHeight }) => 1.0 / viewportHeight
+    },
+    depth: { enable: false },
+    count: 3
+  });
   var amt = 1.5;
 
   var n = 9;
@@ -83,10 +109,17 @@ function onloaded(assets) {
         t_offset: amt * i
       })
     );
-  regl.frame(function() {
-    regl.clear({ color: [0, 0, 0, 1], depth: true });
+  regl.frame(function({ viewportWidth, viewportHeight }) {
+    fbo.resize(viewportWidth, viewportHeight);
+
+    // regl.clear({ color: [0, 0, 0, 1], depth: true });
     camera(function() {
-      earths.forEach(d => d());
+      fbo.use(() => {
+        regl.clear({ color: [0, 0, 0, 1], depth: true });
+
+        earths.forEach(d => d());
+      });
+      drawFboBlurred();
     });
   });
 }
@@ -115,7 +148,7 @@ function earth(regl, opts) {
           sunpos, // sun position
           22.0, // sun intensity
           1372e3, // planet radius (m)
-          1472e3, // atmosphere radius (m)
+          1572e3, // atmosphere radius (m)
           vec3(5.5e-6,13.0e-6,22.4e-6), // rayleigh scattering
           21e-6, // mie scattering
           8e3, // rayleight scale height
@@ -145,13 +178,14 @@ vec3         c =( (tmoon-0.8)*3.0) * light + vscatter *0.1
           // c = vec3(light);
          vec3 color = pow(c,vec3(1.0/2.2));
 
-         float n =   ((fbm3d(vec3(gl_FragCoord.xy / 4.0, time * 0.0001),2) * 0.5) + 0.5);
+         float n =   ((fbm3d(vec3(gl_FragCoord.xy / 4.0, time * 0.0),2) * 0.5) + 0.5);
         //  color = vec3(n);
           if (luma(color) <  n){
-          color = vec3(0.0);
+          // color = vec3(0.0);
         }else{
-          color = vec3(1.0);
+          // color = vec3(1.0);
         }
+        color = vec3(luma(color));
         gl_FragColor = vec4(color,1.0);
       }
     `,
@@ -185,6 +219,7 @@ vec3         c =( (tmoon-0.8)*3.0) * light + vscatter *0.1
       // night: opts.textures.night,
       // clouds: opts.textures.clouds,
       moon: opts.textures.moon
-    }
+    },
+    framebuffer: fbo
   });
 }
