@@ -1,37 +1,34 @@
-// var regl = require("regl")();
-var createReglRecorder = require("regl-recorder");
-var fs = require("fs");
+var regl = require("regl")();
 
-var videoSize = 800;
-var regl = require("regl")(require("gl")(videoSize, videoSize));
-var recorder = createReglRecorder(regl, 170);
+// var createReglRecorder = require("regl-recorder");
+// var fs = require("fs");
 
-var jpeg = require("jpeg-js");
-// var jpegData = fs.readFileSync("grumpycat.jpg");
-// var rawImageData = jpeg.decode(jpegData);
-// console.log(rawImageData);
+// var videoSize = 1000;
+// var regl = require("regl")(require("gl")(videoSize, videoSize));
+// var recorder = createReglRecorder(regl, 200);
+// var jpeg = require("jpeg-js");
 
 var camera = require("regl-camera")(regl, { minDistance: 1, distance: 3 });
 var icosphere = require("icosphere");
 var glsl = require("glslify");
-// var resl = require("resl");
+var resl = require("resl");
 
-// resl({
-//   manifest: {
-//     day: { type: "image", src: "day.jpg" },
-//     night: { type: "image", src: "night.jpg" },
-//     clouds: { type: "image", src: "clouds.jpg" },
-//     moon: { type: "image", src: "moon.jpg" }
-//   },
-//   onDone: onloaded
-// });
-
-onloaded({
-  day: fs.readFileSync("day.jpg"),
-  night: fs.readFileSync("night.jpg"),
-  clouds: fs.readFileSync("clouds.jpg"),
-  moon: jpeg.decode(fs.readFileSync("moon.jpg"))
+resl({
+  manifest: {
+    day: { type: "image", src: "day.jpg" },
+    night: { type: "image", src: "night.jpg" },
+    clouds: { type: "image", src: "clouds.jpg" },
+    moon: { type: "image", src: "moon.jpg" }
+  },
+  onDone: onloaded
 });
+
+// onloaded({
+//   day: fs.readFileSync("day.jpg"),
+//   night: fs.readFileSync("night.jpg"),
+//   clouds: fs.readFileSync("clouds.jpg"),
+//   moon: jpeg.decode(fs.readFileSync("moon.jpg"))
+// });
 
 function onloaded(assets) {
   console.dir(assets.moon);
@@ -51,17 +48,17 @@ function onloaded(assets) {
         mag: "linear"
       }),
       moon: regl.texture({
-        // data:
-        mag: "linear",
-        ...assets.moon
+        data: assets.clouds,
+        mag: "linear"
+        // ...assets.moon
       })
     }
   });
   regl.frame(function() {
-    regl.clear({ color: [0, 0, 0, 0], depth: true });
+    regl.clear({ color: [0, 0, 0, 1], depth: true });
     camera(function() {
       draw();
-      recorder.frame(videoSize, videoSize);
+      // recorder.frame(videoSize, videoSize);
     });
   });
 }
