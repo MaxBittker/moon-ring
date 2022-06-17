@@ -14,7 +14,7 @@
     "glsl-noise": "0.0.0",
     "glslify": "^6.0.0",
     "icosphere": "^1.0.0",
-    "jpeg-js": "^0.3.6",
+    "jpeg-js": "^0.4.4",
     "regl": "^1.2.1",
     "regl-camera": "maxbittker/regl-camera",
     "regl-recorder": "^0.2.0",
